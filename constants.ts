@@ -1,4 +1,3 @@
-
 import { Phase } from './types';
 
 export const PHASE_LABELS: Record<Phase, string> = {
@@ -34,28 +33,48 @@ MODE: STRATEGIC COACHING.
 STRICT FORMATTING RULE:
 Everything between <milestones> and </milestones> tags MUST be a valid JSON array. 
 DO NOT use markdown backticks (like \`\`\`json) inside these tags. 
+Output ONLY the raw JSON array between the tags.
 
-JSON STRUCTURE:
+EXAMPLE OUTPUT FORMAT:
+<milestones>
 [
   {
-    "id": "string",
-    "title": "string",
-    "whyItMatters": "string",
-    "timeline": "string",
+    "id": "m1",
+    "title": "Master Executive Communication",
+    "whyItMatters": "Clear communication is the foundation of leadership presence",
+    "timeline": "2-4 weeks",
     "status": "Not Started",
     "resources": [
       {
-        "label": "string",
-        "url": "string",
-        "type": "video" | "course"
+        "label": "Executive Presence Masterclass",
+        "url": "https://www.youtube.com/watch?v=REAL_VIDEO_ID",
+        "type": "video"
+      },
+      {
+        "label": "Leadership Communication Course",
+        "url": "https://www.coursera.org/learn/leadership-communication",
+        "type": "course"
       }
     ]
   }
 ]
+</milestones>
+
+JSON STRUCTURE REQUIREMENTS:
+Each milestone object MUST contain:
+- "id": Unique identifier (string)
+- "title": Milestone name (string)
+- "whyItMatters": Strategic explanation (string)
+- "timeline": Expected duration (string)
+- "status": Always "Not Started" initially (string)
+- "resources": Array of at least 3 resources
 
 The milestones JSON MUST include:
 - At least 2 REAL YouTube video links (type: 'video').
 - At least 1 REAL free course from Coursera, Udemy, or Microsoft Learn (type: 'course').
+- All URLs must be valid and accessible.
+
+IMPORTANT: Do NOT include any text, markdown formatting, or backticks inside the <milestones> tags.
 `;
 
 export const SIMULATOR_SYSTEM_INSTRUCTION = `

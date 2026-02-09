@@ -42,7 +42,6 @@ export const InterviewSimulator: React.FC<InterviewSimulatorProps> = ({
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const transcriptRef = useRef<string>("");
-  // Fixed: removed redundant and syntactically incorrect redeclaration of behavioralNotesRef.
   const behavioralNotesRef = useRef<string[]>([]);
   const auditTimerRef = useRef<NodeJS.Timeout | null>(null);
   const videoFrameTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -190,21 +189,23 @@ export const InterviewSimulator: React.FC<InterviewSimulatorProps> = ({
               transcriptRef.current += text;
               modelAccumulatedTextRef.current += text;
 
+              // Robust extraction for voice-sim milestones
               const milestoneMatch = modelAccumulatedTextRef.current.match(/<milestones>([\s\S]*?)<\/milestones>/);
               if (milestoneMatch && onMilestonesDetected) {
                 try {
                   const cleanedJson = milestoneMatch[1].replace(/```json|```/g, '').trim();
                   const milestones = JSON.parse(cleanedJson);
                   
-                  // Pulse Effect: Milestone Signal Detected
-                  setIsSignalPulse(true);
-                  setTimeout(() => setIsSignalPulse(false), 2000);
-                  
-                  onReasoning("Trajectory detected via multimodal signals.");
-                  onMilestonesDetected(milestones);
-                  setTimeout(() => handleFinishSession(), 2500);
+                  if (Array.isArray(milestones) && milestones.length > 0) {
+                    setIsSignalPulse(true);
+                    setTimeout(() => setIsSignalPulse(false), 2000);
+                    
+                    onReasoning("Trajectory detected via multimodal signals.");
+                    onMilestonesDetected(milestones);
+                    setTimeout(() => handleFinishSession(), 2500);
+                  }
                 } catch (e) {
-                  console.error("Milestone parse error", e);
+                  // Catch errors silently during stream accumulations
                 }
               }
             }
@@ -284,7 +285,9 @@ export const InterviewSimulator: React.FC<InterviewSimulatorProps> = ({
 
   const renderTranscript = (text: string) => {
     if (!text) return null;
-    const parts = text.split(/(!TIP:.*?)(?=[.!?\n]|$)/g);
+    // Remove the raw milestones block from the visual transcript for elite cleanliness
+    const visibleText = text.replace(/<milestones>[\s\S]*?<\/milestones>/g, '');
+    const parts = visibleText.split(/(!TIP:.*?)(?=[.!?\n]|$)/g);
     return parts.map((part, i) => (
       part.startsWith('!TIP:') 
         ? <span key={i} className="text-orange-400 font-bold drop-shadow-sm">{part}</span>

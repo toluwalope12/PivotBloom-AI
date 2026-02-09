@@ -93,11 +93,16 @@ const App: React.FC = () => {
 
   const speakText = async (text: string) => {
     await resumeAudio();
-    const cleanText = text.replace(/<[^>]*>?|!TIP:|^.*TRANSCRIPTION:.*$/gim, '').trim();
-    if (!cleanText || cleanText.length < 2) return;
+    // Pre-filtering milestones out of TTS
+    const cleanTextForSpeech = text
+      .replace(/<milestones>[\s\S]*?<\/milestones>/g, '')
+      .replace(/!TIP:|<[^>]*>?/gm, '')
+      .trim();
+    
+    if (!cleanTextForSpeech || cleanTextForSpeech.length < 2) return;
 
     try {
-      const base64Audio = await getVoiceResponse(cleanText);
+      const base64Audio = await getVoiceResponse(cleanTextForSpeech);
       if (base64Audio) {
         const audioCtx = audioCtxRef.current!;
         const binary = atob(base64Audio);
@@ -177,40 +182,50 @@ const App: React.FC = () => {
         fullText += chunkText;
         if (fullText.length > 200) setProcessingStage(REASONING_STATES[2]);
 
-        // Zero-Latency Roadmap Detection: Detect <milestones> and </milestones> tags
+        // Enhanced Real-time Milestone Extraction
         if (!milestonesDetected && fullText.includes('</milestones>')) {
            const milestoneMatch = fullText.match(/<milestones>([\s\S]*?)<\/milestones>/);
            if (milestoneMatch) {
              try {
-                const milestoneData = milestoneMatch[1].replace(/```json|```/g, '').trim();
-                const parsedMilestones = JSON.parse(milestoneData);
+                // Ensure we handle potentially incomplete or markdown-wrapped JSON gracefully
+                const rawJson = milestoneMatch[1].replace(/```json|```/g, '').trim();
+                const parsedMilestones = JSON.parse(rawJson);
                 if (Array.isArray(parsedMilestones) && parsedMilestones.length > 0) {
                    setState(prev => ({ ...prev, milestones: parsedMilestones }));
                    milestonesDetected = true;
                    addReasoning("Strategic Roadmap parsed and integrated.");
                 }
              } catch (e) {
-                console.warn("Milestone parsing failed during stream.", e);
+                // Catch silently and retry on next chunk if parsing fails due to stream timing
+                console.debug("Milestone chunk incomplete, deferring parse.");
              }
            }
         }
       }
       setIsArchitecting(false);
 
-      // Final fallback check if not detected during stream
+      // Final fallback if stream ended but parsing didn't trigger
       if (!milestonesDetected) {
         const finalMilestoneMatch = fullText.match(/<milestones>([\s\S]*?)<\/milestones>/);
         if (finalMilestoneMatch) {
           try {
-            const finalParsed = JSON.parse(finalMilestoneMatch[1].replace(/```json|```/g, '').trim());
+            const finalRaw = finalMilestoneMatch[1].replace(/```json|```/g, '').trim();
+            const finalParsed = JSON.parse(finalRaw);
             if (Array.isArray(finalParsed)) {
               setState(prev => ({ ...prev, milestones: finalParsed }));
             }
-          } catch (e) {}
+          } catch (e) {
+            console.warn("Final milestone parse failed.", e);
+          }
         }
       }
 
-      const cleanText = fullText.replace(/<[^>]*>([\s\S]*?)<\/[^>]*>/g, '').trim();
+      // Strict UI Cleaning: Remove the entire milestones block from the text display
+      const cleanText = fullText
+        .replace(/<milestones>[\s\S]*?<\/milestones>/g, '')
+        .replace(/<[^>]*>/g, '') // Strip any residual tags
+        .trim();
+
       const updatedHistory: Message[] = [...newHistory, { role: 'model', text: cleanText }];
       
       addReasoning("Synchronizing global professional context...");
