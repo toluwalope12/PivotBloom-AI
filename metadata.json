@@ -1,0 +1,8 @@
+{
+  "name": "PivotBloom - Executive Career Reasoning Engine",
+  "description": "An elite career transition platform serving as a Strategic Architect and Multimodal Auditor. Features deep-reasoning coaching, real-time behavioral interview simulation, and strategic asset generation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
